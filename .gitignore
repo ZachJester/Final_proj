@@ -1,0 +1,25 @@
+# Environments
+.venv/
+venv/
+env/
+__pycache__/
+
+# Weights
+
+
+# Datasets & Outputs
+/4-channel/
+/best_extracted/
+result_*.jpg
+inference_result.jpg
+sample_rgb.jpg
+sample_thermal.jpg
+
+# IDE
+.vscode/
+.idea/
+rgb-t/
+
+# Mac / Windows system files
+.DS_Store
+Thumbs.db
