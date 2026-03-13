@@ -14,6 +14,9 @@ result_*.jpg
 inference_result.jpg
 sample_rgb.jpg
 sample_thermal.jpg
+outputs/
+*.mp4
+*.h5
 
 # IDE
 .vscode/

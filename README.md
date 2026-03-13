@@ -45,3 +45,64 @@ The custom `inference.py` script included in this repository enforces this:
 
 ---
 ### See `setup.md` for a beginner-friendly guide to installing and running this project.
+
+## Video Upload Inference API (People Count Stats)
+
+This repo now includes a video inference pipeline that lets a user upload a video and get person-count stats.
+
+### Files
+- `video_inference.py`: frame-by-frame person counting with YOLO.
+- `api.py`: FastAPI server with upload endpoint.
+- `streamlit_app.py`: Streamlit UI for upload, inference settings, and visual outputs.
+
+### Run the Streamlit UI
+```bash
+pip install -r requirements.txt
+streamlit run streamlit_app.py
+```
+
+`streamlit_app.py` now has 2 modes:
+- `People Video (YOLO .pt)`: current video + thermal workflow.
+- `Plant Disease Images (.h5)`: upload a Keras `.h5` model and images for classification.
+
+For `.h5` mode, install TensorFlow if not already available:
+```bash
+pip install tensorflow
+```
+
+### Run the API
+```bash
+pip install -r requirements.txt
+uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### API Endpoints
+- `GET /health`
+- `POST /infer/video` (multipart form)
+
+### `POST /infer/video` Form Fields
+- `video` (file, required): input video file
+- `thermal_video` (file, optional): synchronized thermal video (falls back to RGB-only if omitted)
+- `frame_stride` (int, optional, default `5`): process every Nth frame
+- `confidence` (float, optional, default `0.45`): YOLO confidence threshold
+- `enable_tracking` (bool, optional, default `true`): enable ByteTrack IDs and unique-person counts
+- `output_mode` (string, optional, default `stats`): one of `stats`, `frames`, `video`, `all`
+- `include_timeline` (bool, optional, default `true`): include per-sampled-frame counts
+- `save_annotated` (bool, optional, default `false`): save annotated output video
+
+### Example Request
+```bash
+curl -X POST "http://localhost:8000/infer/video" \
+  -F "video=@sample.mp4" \
+  -F "thermal_video=@sample_thermal.mp4" \
+  -F "frame_stride=5" \
+  -F "confidence=0.45" \
+  -F "enable_tracking=true" \
+  -F "output_mode=frames" \
+  -F "include_timeline=true" \
+  -F "save_annotated=true"
+```
+
+If `output_mode=frames` or `all`, response includes `annotated_frame_urls`.
+In `frames`/`all` mode, frame exports are generated for every frame with bounding boxes.
+If `output_mode=video` or `all` (or `save_annotated=true`), response includes `annotated_video_url` served under `/outputs/...`.
