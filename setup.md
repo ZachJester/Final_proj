@@ -1,73 +1,115 @@
-# Setup and Inference Guide 
+# Setup and Run Guide
 
-Welcome! This guide will hold your hand through setting up this project and running your first Thermal-RGB Object Detection inference using the provided YOLO model. 
+This project now supports four inference paths:
+- Image fusion inference (`inference.py`)
+- Video people counting/tracking CLI (`video_inference.py`)
+- Video upload API (`api.py`)
+- Streamlit UI with two modes:
+  - People video (`.pt` YOLO)
+  - Plant disease image inference (`.h5` Keras)
 
-Don't worry if you aren't an expert programmer—just follow these steps in order.
+## 1. Create and Activate a Virtual Environment
 
----
-
-## 💻 Step 1: Open Your Terminal (Command Line)
-First, you need a terminal window open in the folder where your files are located (presumably `e:\NII_CU_MAPD_dataset`).
-
-If you are using **VS Code**, you can open the terminal by clicking `Terminal` -> `New Terminal` in the top menu.
-
-## 🐍 Step 2: Ensure Python is Installed & Create a Virtual Environment (venv)
-You need Python to run this code. If you don't have it, download it from [python.org](https://www.python.org/downloads/). 
-*(Make sure to check the box that says "Add Python to PATH" during installation).*
-
-We highly recommend using a Python Virtual Environment to keep your packages isolated. In your terminal, run the following commands:
 ```bash
-# Create the virtual environment called "env"
 python -m venv .venv
+```
 
-# Activate the virtual environment
-# Windows:
+Windows (PowerShell):
+```powershell
 .venv\Scripts\activate
-# Mac/Linux:
+```
+
+macOS/Linux:
+```bash
 source .venv/bin/activate
 ```
-*(Your terminal should now show `(.venv)` at the beginning of the prompt indicating it's active!)*
 
-## 📦 Step 3: Install the Required Packages
-We have provided a file called `requirements.txt` containing the list of libraries the code needs to run (like OpenCV, PyTorch, and Ultralytics).
+## 2. Install Dependencies
 
-In your terminal, copy and paste this command and press **Enter**:
 ```bash
 pip install -r requirements.txt
 ```
-*Note: Wait a few minutes for everything to install. It might download a few gigabytes of data if it's installing PyTorch for the first time.*
 
-## 🚀 Step 4: Run Your First Inference!
-Now for the fun part. You are going to use the `inference.py` script to fuse a regular camera picture with a thermal picture, and then our AI model (`best.pt`) will try to find the humans in it.
+If you plan to use plant `.h5` mode in Streamlit and TensorFlow is missing:
 
-To do this, we've provided two sample images in your folder: `sample_rgb.jpg` and `sample_thermal.jpg`.
-
-Copy and paste this exact command into your terminal and press **Enter**:
 ```bash
-python inference.py --rgb sample_rgb.jpg --thermal sample_thermal.jpg
+pip install tensorflow
 ```
 
-**What is happening?**
-1. The script reads `sample_rgb.jpg` and `sample_thermal.jpg`.
-2. It blends them together (70% standard color, 30% thermal heat).
-3. It loads the AI brain (`best.pt`).
-4. It spits out a brand new image called `inference_result.jpg` (or in some cases `result_sample.jpg` if you specify it).
+## 3. Run Image Fusion Inference (RGB + Thermal Image Pair)
 
-## 🖼️ Step 5: View the Result
-Look in your folder! You should see a newly created file called `inference_result.jpg`. 
-Open it up. You will see the weirdly-colored fused image, and if the AI worked correctly, there will be colored boxes drawn around any people it found!
-
----
-
-## 🛠️ Advanced Usage
-Do you want to run this on your own images? No problem! Just change the names of the files in the command.
-
-For example, if you have `my_camera.jpg` and `my_thermal.jpg`, you would run:
 ```bash
-python inference.py --rgb my_camera.jpg --thermal my_thermal.jpg
+python inference.py --rgb sample_rgb.jpg --thermal sample_thermal.jpg --out inference_result.jpg
 ```
 
-If you want to save the final result under a specific catchy name, add `--out`:
+Output: `inference_result.jpg`
+
+## 4. Run Video CLI Inference (People Counting + Tracking)
+
+RGB-only:
 ```bash
-python inference.py --rgb my_camera.jpg --thermal my_thermal.jpg --out "my_cool_result.jpg"
+python video_inference.py --video input.mp4
+```
+
+RGB + Thermal video:
+```bash
+python video_inference.py --video rgb.mp4 --thermal-video thermal.mp4
+```
+
+Useful options:
+- `--conf 0.45`
+- `--stride 5`
+- `--save-annotated --annotated-out annotated_output.mp4`
+- `--no-track` (disable unique-person tracking)
+
+## 5. Run FastAPI Video Service
+
+```bash
+uvicorn api:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Health check:
+```bash
+curl http://localhost:8000/health
+```
+
+Video inference request:
+```bash
+curl -X POST "http://localhost:8000/infer/video" \
+  -F "video=@sample.mp4" \
+  -F "frame_stride=5" \
+  -F "confidence=0.45" \
+  -F "enable_tracking=true" \
+  -F "output_mode=frames"
+```
+
+`output_mode` supports: `stats`, `frames`, `video`, `all`.
+
+## 6. Run Streamlit UI
+
+```bash
+streamlit run streamlit_app.py
+```
+
+### Streamlit Modes
+
+1. `People Video (YOLO .pt)`
+- Uses `best.pt`
+- Supports optional thermal video
+- Supports tracking and output modes (`stats/frames/video/all`)
+
+2. `Plant Disease Images (.h5)`
+- Uses `./plant_disease_model.h5` by default (relative path)
+- Optional uploaded `.h5` can override default model
+- Accepts multiple input images
+- Optional class names from `.txt` or text box
+
+## 7. Common Notes
+
+- Large media/model files are ignored by default (`*.mp4`, `*.h5`) in `.gitignore`.
+- If dependency resolver errors occur, ensure your venv is active and retry:
+
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
 ```
